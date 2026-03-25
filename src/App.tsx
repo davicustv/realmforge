@@ -3,21 +3,17 @@ import { supabase } from './lib/supabase';
 
 function App() {
   const [user, setUser] = useState<any>(null);
-  const [account, setAccount] = useState<any>(null);
   const [characters, setCharacters] = useState<any[]>([]);
   const [selectedCharacter, setSelectedCharacter] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newCharacterName, setNewCharacterName] = useState('');
 
-  // Initialize auth and account
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
-
       if (data.session?.user) {
-        await ensureAccount(data.session.user);
         await loadCharacters(data.session.user.id);
       }
       setLoading(false);
@@ -27,51 +23,17 @@ function App() {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) {
-        ensureAccount(session.user);
-        loadCharacters(session.user.id);
-      } else {
-        setAccount(null);
-        setCharacters([]);
-        setSelectedCharacter(null);
-      }
+      if (session?.user) loadCharacters(session.user.id);
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
-  // Create account record if it doesn't exist
-  const ensureAccount = async (authUser: any) => {
-    // Check if account already exists
-    let { data } = await supabase
-      .from('accounts')
-      .select('*')
-      .eq('user_id', authUser.id)
-      .single();
-
-    if (!data) {
-      // Create new account
-      const { data: newAccount, error } = await supabase
-        .from('accounts')
-        .insert({
-          user_id: authUser.id,
-          username: authUser.user_metadata?.full_name || authUser.email || 'Adventurer',
-        })
-        .select()
-        .single();
-
-      if (error) console.error("Error creating account:", error);
-      else setAccount(newAccount);
-    } else {
-      setAccount(data);
-    }
-  };
-
   const loadCharacters = async (userId: string) => {
     const { data } = await supabase
       .from('characters')
       .select('*')
-      .eq('user_id', userId);   // Note: we're still linking characters to auth user_id for simplicity
+      .eq('user_id', userId);
     setCharacters(data || []);
   };
 
@@ -108,7 +70,9 @@ function App() {
 
   const signOut = () => supabase.auth.signOut();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
+  }
 
   if (!user) {
     return (
@@ -132,7 +96,12 @@ function App() {
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-5xl font-bold text-yellow-400">REALMFORGE</h1>
-          <button onClick={signOut} className="text-sm underline">Sign Out</button>
+          <button 
+            onClick={signOut}
+            className="px-6 py-2 bg-red-900 hover:bg-red-800 text-white rounded-xl text-sm font-medium"
+          >
+            Logout
+          </button>
         </div>
 
         <h2 className="text-3xl mb-8">Select Your Character</h2>
@@ -170,6 +139,7 @@ function App() {
         </button>
       </div>
 
+      {/* Create Character Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
           <div className="bg-black border border-amber-700 rounded-3xl p-8 w-full max-w-sm">

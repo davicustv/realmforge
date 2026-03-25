@@ -3,39 +3,82 @@ import { supabase } from './lib/supabase';
 
 function App() {
   const [user, setUser] = useState<any>(null);
+  const [account, setAccount] = useState<any>(null);
   const [characters, setCharacters] = useState<any[]>([]);
+  const [selectedCharacter, setSelectedCharacter] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newCharacterName, setNewCharacterName] = useState('');
 
-  // Load user and characters
+  // Initialize auth and account
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
-      if (data.session?.user) loadCharacters(data.session.user.id);
+
+      if (data.session?.user) {
+        await ensureAccount(data.session.user);
+        await loadCharacters(data.session.user.id);
+      }
       setLoading(false);
-    });
+    };
+
+    init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
-      if (session?.user) loadCharacters(session.user.id);
+      if (session?.user) {
+        ensureAccount(session.user);
+        loadCharacters(session.user.id);
+      } else {
+        setAccount(null);
+        setCharacters([]);
+        setSelectedCharacter(null);
+      }
     });
 
     return () => listener.subscription.unsubscribe();
   }, []);
 
+  // Create account record if it doesn't exist
+  const ensureAccount = async (authUser: any) => {
+    // Check if account already exists
+    let { data } = await supabase
+      .from('accounts')
+      .select('*')
+      .eq('user_id', authUser.id)
+      .single();
+
+    if (!data) {
+      // Create new account
+      const { data: newAccount, error } = await supabase
+        .from('accounts')
+        .insert({
+          user_id: authUser.id,
+          username: authUser.user_metadata?.full_name || authUser.email || 'Adventurer',
+        })
+        .select()
+        .single();
+
+      if (error) console.error("Error creating account:", error);
+      else setAccount(newAccount);
+    } else {
+      setAccount(data);
+    }
+  };
+
   const loadCharacters = async (userId: string) => {
     const { data } = await supabase
       .from('characters')
       .select('*')
-      .eq('user_id', userId);
+      .eq('user_id', userId);   // Note: we're still linking characters to auth user_id for simplicity
     setCharacters(data || []);
   };
 
   const createCharacter = async () => {
     if (!user || !newCharacterName.trim()) return;
 
-    await supabase.from('characters').insert({
+    const { error } = await supabase.from('characters').insert({
       user_id: user.id,
       realm_id: 'main',
       name: newCharacterName.trim(),
@@ -45,16 +88,27 @@ function App() {
       current_hp: 25,
     });
 
-    setNewCharacterName('');
-    setShowCreateForm(false);
+    if (!error) {
+      setNewCharacterName('');
+      setShowCreateForm(false);
+      loadCharacters(user.id);
+    } else {
+      alert("Error: " + error.message);
+    }
+  };
+
+  const selectCharacter = (char: any) => setSelectedCharacter(char);
+
+  const deleteCharacter = async (id: string) => {
+    if (!confirm("Delete this character permanently?")) return;
+    await supabase.from('characters').delete().eq('id', id);
     loadCharacters(user.id);
+    if (selectedCharacter?.id === id) setSelectedCharacter(null);
   };
 
   const signOut = () => supabase.auth.signOut();
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
 
   if (!user) {
     return (
@@ -91,12 +145,19 @@ function App() {
           {characters.map((char) => (
             <div
               key={char.id}
-              className="bg-black/60 border border-amber-700 p-6 rounded-2xl flex justify-between items-center"
+              onClick={() => selectCharacter(char)}
+              className="bg-black/60 border border-amber-700 hover:border-yellow-400 p-6 rounded-2xl cursor-pointer flex justify-between items-center transition-all"
             >
               <div>
                 <p className="text-2xl font-bold">{char.name || `Hero ${char.level}`}</p>
                 <p className="text-amber-400">Level {char.level} • Gold {char.gold}</p>
               </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); deleteCharacter(char.id); }}
+                className="text-red-400 hover:text-red-500 px-3 py-1"
+              >
+                Delete
+              </button>
             </div>
           ))}
         </div>

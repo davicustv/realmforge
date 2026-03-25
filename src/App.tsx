@@ -9,13 +9,12 @@ function App() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newCharacterName, setNewCharacterName] = useState('');
 
-  // Auth + Load characters
   useEffect(() => {
     const init = async () => {
       const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
       if (data.session?.user) {
-        loadCharacters(data.session.user.id);
+        await loadCharacters(data.session.user.id);
       }
       setLoading(false);
     };
@@ -63,7 +62,7 @@ function App() {
       setShowCreateForm(false);
       loadCharacters(user.id);
     } else {
-      alert("Error: " + error.message);
+      alert("Error creating character: " + error.message);
     }
   };
 
@@ -78,9 +77,7 @@ function App() {
 
   const signOut = () => supabase.auth.signOut();
 
-  if (loading) {
-    return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
-  }
+  if (loading) return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
 
   if (!user) {
     return (
@@ -118,7 +115,7 @@ function App() {
                 <div
                   key={char.id}
                   onClick={() => selectCharacter(char)}
-                  className="bg-black/60 border border-amber-700 hover:border-yellow-400 p-6 rounded-2xl cursor-pointer flex justify-between items-center transition-all"
+                  className="bg-black/60 border border-amber-700 hover:border-yellow-400 p-6 rounded-2xl cursor-pointer flex justify-between items-center"
                 >
                   <div>
                     <p className="text-2xl font-bold">{char.name || `Hero ${char.level}`}</p>
@@ -143,7 +140,7 @@ function App() {
           </button>
         </div>
 
-        {/* Create Modal */}
+        {/* Create Form Modal */}
         {showCreateForm && (
           <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
             <div className="bg-black border border-amber-700 rounded-3xl p-8 w-full max-w-sm">
@@ -170,18 +167,15 @@ function App() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#1c1208] via-[#2c1b0f] to-[#1c1208] text-amber-200 font-mono p-8">
       <div className="max-w-2xl mx-auto text-center">
-        <h1 className="text-5xl font-bold text-yellow-400 mb-2">REALMFORGE</h1>
+        <h1 className="text-5xl font-bold text-yellow-400 mb-4">REALMFORGE</h1>
         <p className="mb-8">Playing as <span className="text-yellow-400 font-bold">{selectedCharacter.name}</span></p>
         
-        <div className="bg-black/60 border border-amber-700 rounded-3xl p-12">
-          <p className="text-2xl">Full game UI coming next...</p>
-          <button 
-            onClick={() => setSelectedCharacter(null)}
-            className="mt-12 underline text-amber-400"
-          >
-            ← Back to Character Select
-          </button>
-        </div>
+        <button 
+          onClick={() => setSelectedCharacter(null)}
+          className="mt-12 underline text-amber-400"
+        >
+          ← Back to Character Select
+        </button>
       </div>
     </div>
   );

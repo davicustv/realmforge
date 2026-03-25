@@ -62,7 +62,7 @@ function App() {
       setShowCreateForm(false);
       loadCharacters(user.id);
     } else {
-      alert("Error creating character: " + error.message);
+      alert("Error: " + error.message);
     }
   };
 
@@ -77,7 +77,9 @@ function App() {
 
   const signOut = () => supabase.auth.signOut();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
+  }
 
   if (!user) {
     return (
@@ -115,7 +117,7 @@ function App() {
                 <div
                   key={char.id}
                   onClick={() => selectCharacter(char)}
-                  className="bg-black/60 border border-amber-700 hover:border-yellow-400 p-6 rounded-2xl cursor-pointer flex justify-between items-center"
+                  className="bg-black/60 border border-amber-700 hover:border-yellow-400 p-6 rounded-2xl cursor-pointer flex justify-between items-center transition-all"
                 >
                   <div>
                     <p className="text-2xl font-bold">{char.name || `Hero ${char.level}`}</p>
@@ -140,7 +142,7 @@ function App() {
           </button>
         </div>
 
-        {/* Create Form Modal */}
+        {/* Create Character Modal */}
         {showCreateForm && (
           <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
             <div className="bg-black border border-amber-700 rounded-3xl p-8 w-full max-w-sm">

@@ -4,22 +4,17 @@ import { supabase } from './lib/supabase';
 function App() {
   const [user, setUser] = useState<any>(null);
   const [characters, setCharacters] = useState<any[]>([]);
-  const [selectedCharacter, setSelectedCharacter] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newCharacterName, setNewCharacterName] = useState('');
 
+  // Load user and characters
   useEffect(() => {
-    const init = async () => {
-      const { data } = await supabase.auth.getSession();
+    supabase.auth.getSession().then(({ data }) => {
       setUser(data.session?.user ?? null);
-      if (data.session?.user) {
-        await loadCharacters(data.session.user.id);
-      }
+      if (data.session?.user) loadCharacters(data.session.user.id);
       setLoading(false);
-    };
-
-    init();
+    });
 
     const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
@@ -33,15 +28,14 @@ function App() {
     const { data } = await supabase
       .from('characters')
       .select('*')
-      .eq('user_id', userId)
-      .order('created_at');
+      .eq('user_id', userId);
     setCharacters(data || []);
   };
 
   const createCharacter = async () => {
     if (!user || !newCharacterName.trim()) return;
 
-    const { error } = await supabase.from('characters').insert({
+    await supabase.from('characters').insert({
       user_id: user.id,
       realm_id: 'main',
       name: newCharacterName.trim(),
@@ -51,27 +45,16 @@ function App() {
       current_hp: 25,
     });
 
-    if (!error) {
-      setNewCharacterName('');
-      setShowCreateForm(false);
-      loadCharacters(user.id);
-    } else {
-      alert("Error: " + error.message);
-    }
-  };
-
-  const selectCharacter = (char: any) => setSelectedCharacter(char);
-
-  const deleteCharacter = async (id: string) => {
-    if (!confirm("Delete this character permanently?")) return;
-    await supabase.from('characters').delete().eq('id', id);
+    setNewCharacterName('');
+    setShowCreateForm(false);
     loadCharacters(user.id);
-    if (selectedCharacter?.id === id) setSelectedCharacter(null);
   };
 
   const signOut = () => supabase.auth.signOut();
 
-  if (loading) return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center text-3xl">Loading Realmforge...</div>;
+  }
 
   if (!user) {
     return (
@@ -89,7 +72,7 @@ function App() {
     );
   }
 
-  // === CHARACTER SELECT SCREEN ===
+  // Character Select Screen
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-950 to-amber-900 font-mono p-8">
       <div className="max-w-2xl mx-auto">
@@ -108,19 +91,12 @@ function App() {
           {characters.map((char) => (
             <div
               key={char.id}
-              onClick={() => selectCharacter(char)}
-              className="bg-black/60 border border-amber-700 hover:border-yellow-400 p-6 rounded-2xl cursor-pointer flex justify-between items-center transition-all"
+              className="bg-black/60 border border-amber-700 p-6 rounded-2xl flex justify-between items-center"
             >
               <div>
                 <p className="text-2xl font-bold">{char.name || `Hero ${char.level}`}</p>
                 <p className="text-amber-400">Level {char.level} • Gold {char.gold}</p>
               </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); deleteCharacter(char.id); }}
-                className="text-red-400 hover:text-red-500 px-3 py-1"
-              >
-                Delete
-              </button>
             </div>
           ))}
         </div>
@@ -133,7 +109,6 @@ function App() {
         </button>
       </div>
 
-      {/* Create Modal */}
       {showCreateForm && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50">
           <div className="bg-black border border-amber-700 rounded-3xl p-8 w-full max-w-sm">

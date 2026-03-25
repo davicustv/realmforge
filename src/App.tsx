@@ -39,7 +39,7 @@ function App() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-amber-950 to-amber-900 flex items-center justify-center font-mono p-4">
         <div className="bg-black/70 border border-amber-700 rounded-3xl p-10 max-w-md w-full text-center">
-          <h1 className="text-5xl font-bold text-yellow-400 mb-8">REALMFORGE</h1>
+          <h1 className="text-5xl font-bold text-yellow-400">REALMFORGE - TESTING</h1>
           <button
             onClick={() => supabase.auth.signInWithOAuth({ provider: 'discord' })}
             className="w-full py-5 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold rounded-2xl text-xl"

@@ -7,11 +7,16 @@ function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    const init = async () => {
+      const { data } = await supabase.auth.getSession();
       setUser(data.session?.user ?? null);
-      if (data.session?.user) loadCharacters(data.session.user.id);
+      if (data.session?.user) {
+        await loadCharacters(data.session.user.id);
+      }
       setLoading(false);
-    });
+    };
+
+    init();
 
     const { data: listener } = supabase.auth.onAuthStateChange((_, session) => {
       setUser(session?.user ?? null);
@@ -39,7 +44,7 @@ function App() {
     return (
       <div className="min-h-screen bg-gradient-to-b from-amber-950 to-amber-900 flex items-center justify-center font-mono p-4">
         <div className="bg-black/70 border border-amber-700 rounded-3xl p-10 max-w-md w-full text-center">
-          <h1 className="text-5xl font-bold text-yellow-400">REALMFORGE - TESTING</h1>
+          <h1 className="text-5xl font-bold text-yellow-400 mb-8">REALMFORGE - TESTING</h1>
           <button
             onClick={() => supabase.auth.signInWithOAuth({ provider: 'discord' })}
             className="w-full py-5 bg-[#5865F2] hover:bg-[#4752C4] text-white font-bold rounded-2xl text-xl"
@@ -51,13 +56,13 @@ function App() {
     );
   }
 
-  // Character Select Screen - Forced
+  // Character Select Screen
   return (
     <div className="min-h-screen bg-gradient-to-b from-amber-950 to-amber-900 font-mono p-8">
       <div className="max-w-2xl mx-auto">
         <div className="flex justify-between items-center mb-10">
           <h1 className="text-5xl font-bold text-yellow-400">REALMFORGE</h1>
-          <button onClick={signOut} className="px-6 py-2 bg-red-900 hover:bg-red-800 text-white rounded-xl">Logout</button>
+          <button onClick={signOut} className="px-6 py-2 bg-red-900 hover:bg-red-800 text-white rounded-xl text-sm">Logout</button>
         </div>
 
         <h2 className="text-3xl mb-8">Select Your Character</h2>
@@ -76,7 +81,7 @@ function App() {
         </div>
 
         <button
-          onClick={() => alert("Create character form would open here")}
+          onClick={() => alert("Create character form would open here (next step)")}
           className="w-full py-5 bg-yellow-600 hover:bg-yellow-500 text-black font-bold rounded-2xl text-xl"
         >
           Create New Character
